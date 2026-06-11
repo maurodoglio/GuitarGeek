@@ -1,11 +1,147 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { curriculum, getLevelLabel } from '../data/curriculum';
+import { getLessonContent } from '../data/lessons/index';
 import './LessonPage.css';
+
+function LessonContent({ content }) {
+  if (!content) return null;
+
+  const lines = content.trim().split('\n');
+  const elements = [];
+  let i = 0;
+  let key = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Code blocks
+    if (line.trim().startsWith('```')) {
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing ```
+      elements.push(
+        <pre key={key++} className="lesson-content__code">
+          <code>{codeLines.join('\n')}</code>
+        </pre>
+      );
+      continue;
+    }
+
+    // Headers
+    if (line.startsWith('## ')) {
+      elements.push(<h2 key={key++} className="lesson-content__h2">{line.slice(3)}</h2>);
+      i++;
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      elements.push(<h3 key={key++} className="lesson-content__h3">{line.slice(4)}</h3>);
+      i++;
+      continue;
+    }
+
+    // Tables
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      if (tableLines.length >= 2) {
+        const headers = tableLines[0].split('|').filter(c => c.trim()).map(c => c.trim());
+        const rows = tableLines.slice(2).map(row =>
+          row.split('|').filter(c => c.trim()).map(c => c.trim())
+        );
+        elements.push(
+          <div key={key++} className="lesson-content__table-wrap">
+            <table className="lesson-content__table">
+              <thead>
+                <tr>{headers.map((h, hi) => <th key={hi}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {rows.map((row, ri) => (
+                  <tr key={ri}>{row.map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+      continue;
+    }
+
+    // Unordered list
+    if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+      const items = [];
+      while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
+        items.push(lines[i].trim().slice(2));
+        i++;
+      }
+      elements.push(
+        <ul key={key++} className="lesson-content__list">
+          {items.map((item, li) => <li key={li}>{formatInline(item)}</li>)}
+        </ul>
+      );
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s/.test(line.trim())) {
+      const items = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^\d+\.\s/, ''));
+        i++;
+      }
+      elements.push(
+        <ol key={key++} className="lesson-content__list">
+          {items.map((item, li) => <li key={li}>{formatInline(item)}</li>)}
+        </ol>
+      );
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      i++;
+      continue;
+    }
+
+    // Regular paragraph
+    elements.push(<p key={key++} className="lesson-content__para">{formatInline(line)}</p>);
+    i++;
+  }
+
+  return <div className="lesson-content">{elements}</div>;
+}
+
+function formatInline(text) {
+  // Bold
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    // Inline code
+    const codeParts = part.split(/(`[^`]+`)/g);
+    return codeParts.map((cp, j) => {
+      if (cp.startsWith('`') && cp.endsWith('`')) {
+        return <code key={`${i}-${j}`} className="lesson-content__inline-code">{cp.slice(1, -1)}</code>;
+      }
+      return cp;
+    });
+  });
+}
 
 export function LessonPage({ progressHook }) {
   const { lessonId } = useParams();
   const lesson = curriculum.find(l => l.id === lessonId);
   const { progress, toggleTopic, toggleGoal, getLessonProgress } = progressHook;
+  const [expandedTopic, setExpandedTopic] = useState(null);
+  const lessonContent = getLessonContent(lessonId);
 
   if (!lesson) {
     return (
@@ -78,24 +214,37 @@ export function LessonPage({ progressHook }) {
         <section className="lesson-section">
           <h2 className="lesson-section__title">📚 Topics</h2>
           <p className="lesson-section__subtitle">
-            Check off topics as you work through them. Your progress is saved automatically.
+            Click a topic to expand its lesson content. Check off topics as you complete them.
           </p>
           <div className="topics-list">
-            {lesson.topics.map((topic, i) => (
-              <div
-                key={i}
-                className={`topic-item ${completedTopics.includes(i) ? 'topic-item--done' : ''}`}
-                onClick={() => toggleTopic(lessonId, i)}
-              >
-                <div className="topic-item__checkbox">
-                  {completedTopics.includes(i) ? '✓' : ''}
+            {lesson.topics.map((topic, i) => {
+              const topicContent = lessonContent.find(c => c.topicId === i);
+              const isExpanded = expandedTopic === i;
+              return (
+                <div key={i} className={`topic-item ${completedTopics.includes(i) ? 'topic-item--done' : ''} ${isExpanded ? 'topic-item--expanded' : ''}`}>
+                  <div className="topic-item__header" onClick={() => setExpandedTopic(isExpanded ? null : i)}>
+                    <div
+                      className="topic-item__checkbox"
+                      onClick={(e) => { e.stopPropagation(); toggleTopic(lessonId, i); }}
+                    >
+                      {completedTopics.includes(i) ? '✓' : ''}
+                    </div>
+                    <div className="topic-item__content">
+                      <h4 className="topic-item__name">{topic.name}</h4>
+                      <p className="topic-item__description">{topic.description}</p>
+                    </div>
+                    <div className="topic-item__expand-icon">
+                      {topicContent ? (isExpanded ? '▼' : '▶') : ''}
+                    </div>
+                  </div>
+                  {isExpanded && topicContent && (
+                    <div className="topic-item__lesson-content">
+                      <LessonContent content={topicContent.content} />
+                    </div>
+                  )}
                 </div>
-                <div className="topic-item__content">
-                  <h4 className="topic-item__name">{topic.name}</h4>
-                  <p className="topic-item__description">{topic.description}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 

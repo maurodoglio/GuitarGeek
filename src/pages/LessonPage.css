@@ -134,19 +134,29 @@
 
 .topic-item {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 20px;
+  flex-direction: column;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.topic-item__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
 }
 
 .topic-item:hover {
   border-color: var(--color-primary);
   background: var(--color-bg-elevated);
+}
+
+.topic-item--expanded {
+  border-color: var(--color-primary);
 }
 
 .topic-item--done {
@@ -167,6 +177,19 @@
   flex-shrink: 0;
   margin-top: 2px;
   transition: all 0.2s;
+}
+
+.topic-item__checkbox:hover {
+  border-color: var(--color-success);
+  transform: scale(1.1);
+}
+
+.topic-item__expand-icon {
+  flex-shrink: 0;
+  color: var(--color-text-dim);
+  font-size: 0.75rem;
+  margin-top: 4px;
+  margin-left: auto;
 }
 
 .topic-item--done .topic-item__checkbox {
@@ -287,4 +310,105 @@
   .lesson-nav__btn {
     max-width: 100%;
   }
+}
+
+/* Lesson Content (expanded topic) */
+.topic-item__lesson-content {
+  padding: 0 20px 20px 62px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 0;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 5000px; }
+}
+
+.lesson-content__h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 24px 0 12px;
+  color: var(--color-text);
+}
+
+.lesson-content__h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 20px 0 8px;
+  color: var(--color-primary);
+}
+
+.lesson-content__para {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+  margin: 8px 0;
+}
+
+.lesson-content__code {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.lesson-content__inline-code {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.82em;
+  color: var(--color-primary);
+}
+
+.lesson-content__list {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.lesson-content__list li {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+  margin: 4px 0;
+}
+
+.lesson-content__table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.lesson-content__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.lesson-content__table th,
+.lesson-content__table td {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.lesson-content__table th {
+  background: var(--color-bg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.lesson-content__table td {
+  color: var(--color-text-muted);
+}
+
+.lesson-content__table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
 }
